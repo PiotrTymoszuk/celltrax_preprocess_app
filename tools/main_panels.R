@@ -52,6 +52,7 @@
                  h5('Start with a new sample'),
                  actionButton(inputId = 'refresh',
                               label = 'Reset form'),
+                 br(),
                  h4('Analysis progress'),
                  progressBar(id = 'pb',
                              value = 0,

@@ -12,15 +12,16 @@
                " and ",
                a(href = 'https://github.com/PiotrTymoszuk/celltrax', 'celltrax'),
                " R packages for pre-processing and analysis of microscopy cell tracing data.
-                                This online Shiny tool provides a platform for pre-processing
-                                of user-provided cell tracking data in text form with most
-                                commonly used settings.
-                                The upper size limit of the raw data is 1000 tracks or 40000
-                                steps.
-                                For processing multiple samples, rich or untypical track
-                                sets (i.e. motile macroscopic objects),
-                                please resort, please resort to the seminal R packages."),
+               This online Shiny tool provides a platform for pre-processing
+               of user-provided cell tracking data in text form with most commonly
+               used settings.
+               The upper size limit of the raw data is 1000 tracks or 40000 steps.
+               For processing multiple samples, rich or untypical track sets
+               (i.e. motile macroscopic objects), please resort to the seminal R packages."),
              br(),
+             p('When ready with the pre-processing, the output text file with
+               pre-processed tracks may be directly uploaded to our ',
+               a(href = 'https://im2-ibk.shinyapps.io/celltrax_analysis/', 'analysis Shiny app.')),
              p("For help, please refer to the ",
                a(href = 'Manual.pdf', 'manual.'),
                "You may be also interested in experimenting with demo data provided as ",
@@ -34,6 +35,8 @@
                " and ",
                a(href = 'neutros_raw.tsv', 'neutrophils.')),
              br(),
+             p("The R code of the application is open and available ",
+               a(href = 'https://github.com/PiotrTymoszuk/celltrax_preprocess_app', 'here.')),
              p("The app developers put all efforts to develop and maintain qualitative cell tracing
                 solutions but carry no responsibility for correctness and error-free functioning of
                 the application. This tool may not be used for diagnostic and treatment purposes.
