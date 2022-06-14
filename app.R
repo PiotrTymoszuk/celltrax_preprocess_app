@@ -7,20 +7,26 @@
   library(tidyverse)
   library(shiny)
   library(shinyWidgets)
+  library(shinyjs)
   library(celltrax)
   library(cowplot)
   library(waiter)
   library(writexl)
+  library(stringi)
 
   source('./tools/styles.R')
   source('./tools/main_panels.R')
   source('./tools/tabsets.R')
+  source('./tools/utils.R')
 
   options(shiny.usecairo = FALSE)
+  options(shiny.maxRequestSize = 10*1024^2)
 
 # User interface -----
 
   ui <- fluidPage(
+
+    useShinyjs(),
 
     ## progress bar
 
@@ -70,6 +76,101 @@
 
     })
 
+    spy_results <- eventReactive(input$single_entry, {
+
+      file <- input$single_entry
+
+      spy_file(file$datapath)
+
+
+    })
+
+    ## Upload-specific GUI
+
+    output$upload_ui <- renderUI({
+
+      if(input$upload_type == 'single') {
+
+        fileInput(inputId = 'single_entry',
+                  label = 'Choose the file',
+                  multiple = FALSE,
+                  accept = c('.tsv', '.csv', '.txt'))
+
+      } else {
+
+        tagList(fileInput(inputId = 'x_entry',
+                          label = 'X coordinate file',
+                          multiple = FALSE,
+                          accept = c('.tsv', '.csv', '.txt')),
+                fileInput(inputId = 'y_entry',
+                          label = 'Y coordinate file',
+                          multiple = FALSE,
+                          accept = c('.tsv', '.csv', '.txt')),
+                fileInput(inputId = 'z_entry',
+                          label = 'Z coordinate file (optional)',
+                          multiple = FALSE,
+                          accept = c('.tsv', '.csv', '.txt')))
+
+      }
+
+    })
+
+    output$selectors <- renderUI({
+
+      if(input$upload_type == 'compound') return(NULL)
+
+      if(is.null(input$single_entry)) return(NULL)
+
+      tagList(selectInput('id_name',
+                          label = 'track ID column',
+                          choices = spy_results()$col_names,
+                          selected = spy_results()$id_col),
+              selectInput('t_name',
+                          label = 'time column',
+                          choices = spy_results()$col_names,
+                          selected = spy_results()$t_col),
+              selectInput('x_name',
+                          label = 'X coordinate column',
+                          choices = spy_results()$col_names,
+                          selected = spy_results()$x_col),
+              selectInput('y_name',
+                          label = 'Y coordinate column',
+                          choices = spy_results()$col_names,
+                          selected = spy_results()$y_col),
+              selectInput('z_name',
+                          label = 'Z coordinate column',
+                          choices = c('', spy_results()$col_names),
+                          selected = NULL),
+              selectInput('sample_name',
+                          label = 'sample ID column',
+                          choices = c('', spy_results()$col_names),
+                          selected = NULL))
+
+    })
+
+    output$sample_ui <- renderUI({
+
+      if(is.null(input$sample_name)) return(NULL)
+
+      if(input$sample_name == '') return(NULL)
+
+      if(is.null(input$single_entry)) return(NULL)
+
+      file <- input$single_entry
+
+      txt_entry <- read_delim(file = file$datapath,
+                              delim = '\t',
+                              col_names = TRUE)
+
+      sample_choices <- unique(txt_entry[[input$sample_name]])
+
+      selectInput(inputId = 'sample_select',
+                  label = 'sample',
+                  choices = as.character(sample_choices),
+                  selected = NULL)
+
+    })
+
     ## Table with input tracks
 
     raw_data <- eventReactive(input$launcher, {
@@ -78,7 +179,24 @@
 
         file <- input$single_entry
 
-        output <- try(read_trax(file$datapath), silent = TRUE)
+        z_entry <- if(input$z_name == '') NULL else input$z_name
+
+        sample_entry <- if(input$sample_name == '') NULL else input$sample_name
+
+        output <- try(read_trax_text(file = file$datapath,
+                                     id_name = input$id_name,
+                                     t_name = input$t_name,
+                                     x_name = input$x_name,
+                                     y_name = input$y_name,
+                                     z_name = z_entry,
+                                     sample_name = sample_entry),
+                      silent = TRUE)
+
+        if(!any(class(output) == 'try-error') & !input$sample_name == '') {
+
+          output <- output[[input$sample_select]]
+
+        }
 
       } else if(!is.null(input$x_entry) & !is.null(input$y_entry)) {
 
@@ -99,10 +217,10 @@
 
       }
 
-      if(length(output) > 1000) {
+      if(length(output) > 1500) {
 
         output <- structure('Input error: data limit reached.
-                            The app can process up to 1000 tracks.',
+                            The app can process up to 1500 tracks.',
                             class = 'try-error')
 
       } else {
@@ -119,6 +237,10 @@
         }
 
       }
+
+      hide('upload_ui')
+      hide('selectors')
+      hide('sample_ui')
 
       output
 
