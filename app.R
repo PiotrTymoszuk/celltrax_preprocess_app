@@ -13,6 +13,7 @@
   library(waiter)
   library(writexl)
   library(stringi)
+  library(shinyBS)
 
   source('./tools/styles.R')
   source('./tools/main_panels.R')
@@ -68,13 +69,15 @@
 
   server <- function(input, output, session) {
 
-    ## refresh option
+    ## refresh option -------
 
     observeEvent(input$refresh,{
 
       session$reload()
 
     })
+
+    ## upload-specific UI ------
 
     spy_results <- eventReactive(input$single_entry, {
 
@@ -85,7 +88,17 @@
 
     })
 
-    ## Upload-specific GUI
+    observeEvent(input$single_entry, {
+
+      enable('launcher')
+
+    })
+
+    observeEvent(input$x_entry, {
+
+      enable('launcher')
+
+    })
 
     output$upload_ui <- renderUI({
 
@@ -171,7 +184,7 @@
 
     })
 
-    ## Table with input tracks
+    ## Table with input tracks -------
 
     raw_data <- eventReactive(input$launcher, {
 
@@ -264,7 +277,7 @@
 
     })
 
-    ## correcting for the cell recognition errors
+    ## correcting for the cell recognition errors -------
     ## visualizing the results
 
     splitted_objects <- reactive({
@@ -313,7 +326,7 @@
 
     })
 
-    ## filtering out short tracks
+    ## filtering out short tracks -------
     ## visualizing the results
 
     step_objects <- reactive({
@@ -327,15 +340,33 @@
 
     output$step_tracks <- renderPlot({
 
-      tr_plots <- list(x = step_objects(),
-                       plot_title = c('Kept in the analysis',
-                                      'Excluded')) %>%
-        pmap(plot,
-             type = 'tracks',
-             coverage = input$coverage/100,
-             plot_subtitle = paste('Step cutoff:',
-                                   input$step_cutoff),
-             cust_theme = theme_shiny())
+      if(!is.null(step_objects()[[2]])) {
+
+        tr_plots <- list(x = step_objects(),
+                         plot_title = c('Kept in the analysis',
+                                        'Excluded')) %>%
+          pmap(plot,
+               type = 'tracks',
+               coverage = input$coverage/100,
+               plot_subtitle = paste('Step cutoff:',
+                                     input$step_cutoff),
+               cust_theme = theme_shiny())
+
+
+      } else {
+
+        tr_plots <- list(x = list(step_objects()[[1]],
+                                  step_objects()[[1]]),
+                         plot_title = c('Kept in the analysis',
+                                        'Kept in the analysis')) %>%
+          pmap(plot,
+               type = 'tracks',
+               coverage = input$coverage/100,
+               plot_subtitle = 'No tracks filtered out with the specified cutoff',
+               cust_theme = theme_shiny())
+
+
+      }
 
       plot_grid(plotlist = tr_plots,
                 ncol = 2,
@@ -705,12 +736,17 @@
 
     })
 
-    output$final_tracks <- renderPlot({
+    output$process_tracks <- renderPlot({
 
-      plot_grid(plotlist = map(final_plots(),
-                               ~.x + theme_shiny()),
-                ncol = 2,
-                align = 'hv')
+      final_plots()[[1]] +
+        theme_shiny()
+
+    })
+
+    output$raw_tracks <- renderPlot({
+
+      final_plots()[[2]] +
+        theme_shiny()
 
     })
 
